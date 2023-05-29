@@ -24,14 +24,13 @@ from modules import sd_samplers
 from modules.processing import Processed, process_images
 from modules.shared import state
 
-BASE_PATH = f"{scripts.basedir()}"#/extensions/MUSIC-VIDEO-GENERATOR"
+BASE_PATH = f"{scripts.basedir()}"
 print(f"BASE PATH: {BASE_PATH}")
 
 # Set the used transcriber!
 transcriber: Transcriber = WhisperTranscriber(BASE_PATH)
 generator: VideoGenerator = BasicVideoGenerator()
 refiner: PromptRefiner = PromptRefiner()
-#### END
 
 
 def process_string_tag(tag):
@@ -124,6 +123,38 @@ def load_prompt_file(file):
         lines = [x.strip() for x in file.decode('utf8', errors='ignore').split("\n")]
         return None, "\n".join(lines), gr.update(lines=7)
 
+def wipe_directory(directory_path: str):
+    # Check if the directory exists
+    if not os.path.isdir(directory_path):
+        print(f"Directory '{directory_path}' does not exist.")
+        return
+
+    def contains_important_files(path):
+        importaint_files = ["py, mov, mp4, exe"]
+        for filename in os.listdir(path):
+            extension = filename.split(".")[-1]
+            if(extension in importaint_files):
+                return True
+        return False
+
+    if(contains_important_files(directory_path)):
+        raise Exception("Will not wipe directory since it contains imporant files")
+
+    # Iterate over all files in the directory
+    for filename in os.listdir(directory_path):
+        file_path = os.path.join(directory_path, filename)
+        
+
+        # Check if the current path is a file
+        if os.path.isfile(file_path):
+            try:
+                os.remove(file_path)
+                print(f"Successfully removed file: {file_path}")
+            except Exception as e:
+                print(f"Error occurred while removing file: {file_path}")
+                print(f"Error message: {str(e)}")
+
+
 class Script(scripts.Script):
     def title(self):
         return "Generates a music video from a song file ID 17"
@@ -147,9 +178,7 @@ class Script(scripts.Script):
 
 
         audio.change(fn=transcriber.transcribe_audio_file, inputs=[audio, checkbox_translate], outputs=[prompt_txt], show_progress=False)
-        # We start at one line. When the text changes, we jump to seven lines, or two lines if no \n.
-        # We don't shrink back to 1, because that causes the control to ignore [enter], and it may
-        # be unclear to the user that shift-enter is needed.
+        
         prompt_txt.change(lambda tb: gr.update(lines=7) if ("\n" in tb) else gr.update(lines=2), inputs=[prompt_txt], outputs=[prompt_txt], show_progress=False)
         return [prompt_txt, checkbox_gpt_refinement, checkbox_translate, yt_video_input]
 
@@ -223,15 +252,11 @@ class Script(scripts.Script):
 
         # GENERATE THE VIDEO
         try:
-            generator.generate_video(f"{BASE_PATH}/temp")
-            # TODO delete the files in the temp folder! (EXCEPT THE VIDEO FILE!) 
+            temp_folder:str = f"{BASE_PATH}/temp"
+            generator.generate_video(temp_folder)
+            wipe_directory(temp_folder)
+            
         except Exception as e:
             print("Failed to generate the video: ", str(e))
         return Processed(p, images, p.seed, "", all_prompts=all_prompts, infotexts=infotexts)
-    
-    def get_lines_from_segments(segments):
-        lines = []
-        for seg in segments:
-            lines.append(seg["text"] + "\n")
-        return lines
 
