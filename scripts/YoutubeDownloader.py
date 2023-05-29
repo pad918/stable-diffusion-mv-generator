@@ -1,14 +1,40 @@
 import yt_dlp
 import requests
 import ffmpeg
+import re
+import webvtt
+from string import printable
 
 print("v1111")
 
 class YoutubeDownloader:
 
+    def extract_text_from_vtt(self, vtt_file_path):
+        pattern = r'<[^>]+>'
+        
+        vtt = webvtt.read(vtt_file_path)
+        clean_lines = []
+        for s in vtt:
+            txt = s.text
+            clean = re.sub(pattern, '', txt)
+            
+            # Remove strange invisible unicode characters
+            clean = re.sub("[^{}]+".format(printable), "", clean).strip()
+            clean = clean.replace("\n", " ")
+            if(clean!=""):
+                clean_lines.append(clean)
+        clean_text = "\n".join(clean_lines)
+
+        # Create the text file in the same folder
+        with open(f"{vtt_file_path}.txt", 'w', encoding='utf-8') as f:
+            f.write(clean_text)
+
+
     def download_all(self, video_url:str, destination_dir:str):
+        print("STARING YOUTUBE DOWNLOADER!")
         self.download_audio   (video_url, f"{destination_dir}/audio.wav")
         self.download_captions(video_url, f"{destination_dir}/captions.vtt")
+        self.extract_text_from_vtt(f"{destination_dir}/captions.vtt")
 
     def download_audio(self, video_url:str, destination_file_path:str):
         ydl_opts = {
@@ -30,6 +56,7 @@ class YoutubeDownloader:
                 print('Failed to retrieve audio URL.')
 
     def download_captions(self, video_url:str, destination_file_path:str):
+        print("DOWNLOADING CAPTIONS!")
         ydl_opts = {
             'writesubtitles': True,
             'subtitleslangs': ['en'],  # Specify the language of the captions
@@ -43,16 +70,29 @@ class YoutubeDownloader:
                 subtitles = info_dict.get('subtitles', {}).get('en')
 
                 if subtitles:
-                    # find vtt file
                     def find(predicate, lst):
                         return next((item for item in lst if predicate(item)), None)
+                    
+                    def download(url, file_path):
+                        print(f"Downloading: \n\t{url}\n\t --->\t {file_path}")
+                        vtt_response = requests.get(url)
+                        vtt_response.raise_for_status()  # Check for any errors
+                        with open(file_path, 'w', encoding='utf-8') as f:
+                            f.write(vtt_response.text)
+                    
+                    # Find the urls of the files
                     vtt_url = find(lambda x: x['ext']=='vtt', subtitles)['url']
-                    response = requests.get(vtt_url)
-                    response.raise_for_status()  # Check for any errors
-                    with open(destination_file_path, 'w', encoding='utf-8') as f:
-                        f.write(response.text)
+                    #txt_url = find(lambda x: x['ext']=='txt', subtitles)['url']
+
+                    # Download the vtt and txt caption files
+                    download(vtt_url, destination_file_path)
+                    #download(txt_url, destination_file_path+'.txt')
+                    
 
                 else:
                     print("No English captions found for the video.")
             except yt_dlp.DownloadError as e:
                 print(f"Error: {str(e)}")
+
+test = YoutubeDownloader()
+test.extract_text_from_vtt('J:/program/AI/stable_dev/stable-diffusion-webui/extensions/music-video-generator/temp/captions.vtt')

@@ -129,7 +129,7 @@ def wipe_directory(directory_path: str):
     if not os.path.isdir(directory_path):
         print(f"Directory '{directory_path}' does not exist.")
         return
-
+    # DOES NOT WORK AT THE MOMENT!
     def contains_important_files(path):
         importaint_files = ["py, mov, mp4, exe"]
         for filename in os.listdir(path):
@@ -260,7 +260,7 @@ class Script(scripts.Script):
         try:
             temp_folder:str = f"{BASE_PATH}/temp"
             generator.generate_video(temp_folder)
-            wipe_directory(temp_folder)
+            #wipe_directory(temp_folder)
             
         except Exception as e:
             print("Failed to generate the video: ", str(e))

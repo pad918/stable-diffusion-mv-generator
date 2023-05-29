@@ -13,7 +13,7 @@ class PromptRefiner:
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": f"""
-                Create a short senario from the given lyrics,make up relevant part of the story.  \nLyrics:\n{combined_lines}
+                Create a short senario from the given lyrics, make up relevant part of the story. Make the story based on who it is about, what it is about, the meaning of it and the mood of the story.  \nLyrics:\n{combined_lines}
                 """}
             ]   
         )
