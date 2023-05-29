@@ -10,11 +10,11 @@ import traceback
 import shlex
 import os
 from PIL import Image
-from Transcriber import Transcriber
-from WhisperTranscriber import WhisperTranscriber
-from VideoGenerator import VideoGenerator
-from BasicVideoGenerator import BasicVideoGenerator
-from PromptRefiner import PromptRefiner
+from scripts.Transcriber            import Transcriber
+from scripts.WhisperTranscriber     import WhisperTranscriber
+from scripts.VideoGenerator         import VideoGenerator
+from scripts.BasicVideoGenerator    import BasicVideoGenerator
+from scripts.PromptRefiner          import PromptRefiner
 
 
 import modules.scripts as scripts
@@ -123,34 +123,38 @@ def load_prompt_file(file):
     else:
         lines = [x.strip() for x in file.decode('utf8', errors='ignore').split("\n")]
         return None, "\n".join(lines), gr.update(lines=7)
-    
+
 class Script(scripts.Script):
     def title(self):
         return "Generates a music video from a song file ID 17"
 
     def ui(self, is_img2img):
+        def test_print():
+            print("TEST PRINTING: ")
+            return "sdfjh"
+
+        yt_video_input = gr.Textbox(label="Get audio and subtitles from a youtube video", lines = 1, elem_id=self.elem_id("yt_video_url"))
+        with gr.Row(variant="compact", elem_id="apply_button_row"):
+            yt_video_apply_btn = gr.Button(value="Get audio and captions from yt video", elem_id="run_crawler_btn")
         
-        
-        checkbox_iterate = gr.Checkbox(label="Iterate seed every line", value=False, elem_id=self.elem_id("checkbox_iterate"))
-        checkbox_iterate_batch = gr.Checkbox(label="Use same random seed for all lines", value=False, elem_id=self.elem_id("checkbox_iterate_batch"))
+        yt_video_apply_btn.click(test_print)
+
         checkbox_gpt_refinement = gr.Checkbox(label="Let gpt refine the prompts", value=False, elem_id=self.elem_id("checkbox_gpt_refinement"))
         checkbox_translate = gr.Checkbox(label="Translate lyrics to english", value=False, elem_id=self.elem_id("checkbox_translate"))
-        audio = gr.File(label="Audio file", type='binary', elem_id=self.elem_id("audio_file"))
-        prompt_txt = gr.Textbox(label="List of prompt inputs", lines=1, elem_id=self.elem_id("prompt_txt"))
+        audio          = gr.File(label="Audio file", type='binary', elem_id=self.elem_id("audio_file"))
+        prompt_txt     = gr.Textbox(label="List of prompt inputs", lines=1, elem_id=self.elem_id("prompt_txt"))
         
 
-        print("SETTING UI!")
+
         audio.change(fn=transcriber.transcribe_audio_file, inputs=[audio, checkbox_translate], outputs=[prompt_txt], show_progress=False)
-        #audio.upload(fn=set_transcriptions, inputs=[audio], outputs=[])
         # We start at one line. When the text changes, we jump to seven lines, or two lines if no \n.
         # We don't shrink back to 1, because that causes the control to ignore [enter], and it may
         # be unclear to the user that shift-enter is needed.
         prompt_txt.change(lambda tb: gr.update(lines=7) if ("\n" in tb) else gr.update(lines=2), inputs=[prompt_txt], outputs=[prompt_txt], show_progress=False)
-        return [checkbox_iterate, checkbox_iterate_batch, prompt_txt, checkbox_gpt_refinement, checkbox_translate]
+        return [prompt_txt, checkbox_gpt_refinement, checkbox_translate, yt_video_input]
 
-    def run(self, p, checkbox_iterate, checkbox_iterate_batch, prompt_txt: str, checkbox_gpt_refinement, checkbox_translate):
-        #create_video(f"{BASE_PATH}/temp") # TEST, REMOVE LATER!
-        #return
+    def run(self, p, prompt_txt: str, checkbox_gpt_refinement, checkbox_translate, yt_video_input):
+
         print(f"GENERATING USING THE TEXT PROMPT: {prompt_txt}")
         abc = prompt_tags.get("negative_prompt")
         print(f"PROMPT: {abc}")
@@ -189,8 +193,6 @@ class Script(scripts.Script):
             jobs.append(args)
 
         print(f"Will process {len(lines)} lines in {job_count} jobs.")
-        if (checkbox_iterate or checkbox_iterate_batch) and p.seed == -1:
-            p.seed = int(random.randrange(4294967294))
 
         state.job_count = job_count
 
@@ -207,8 +209,6 @@ class Script(scripts.Script):
             proc = process_images(copy_p)
             images += proc.images
 
-            if checkbox_iterate:
-                p.seed = p.seed + (p.batch_size * p.n_iter)
             all_prompts += proc.all_prompts
             infotexts += proc.infotexts
 
@@ -222,8 +222,11 @@ class Script(scripts.Script):
             i+=1
 
         # GENERATE THE VIDEO
-        generator.generate_video(f"{BASE_PATH}/temp")
-
+        try:
+            generator.generate_video(f"{BASE_PATH}/temp")
+            # TODO delete the files in the temp folder! (EXCEPT THE VIDEO FILE!) 
+        except Exception as e:
+            print("Failed to generate the video: ", str(e))
         return Processed(p, images, p.seed, "", all_prompts=all_prompts, infotexts=infotexts)
     
     def get_lines_from_segments(segments):

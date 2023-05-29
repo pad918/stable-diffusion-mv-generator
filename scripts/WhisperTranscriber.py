@@ -1,8 +1,8 @@
-from Transcriber import Transcriber
+from scripts.Transcriber import Transcriber
 import gradio as gr
 import os
 import glob
-from Translator import Translator
+from scripts.Translator import Translator
 # OBS Should use pyhton binding, not system command!
 
 class WhisperTranscriber(Transcriber):

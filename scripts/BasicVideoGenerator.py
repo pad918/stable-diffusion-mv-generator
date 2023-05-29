@@ -1,4 +1,4 @@
-from VideoGenerator import VideoGenerator
+from scripts.VideoGenerator import VideoGenerator
 import glob
 import webvtt
 import datetime
