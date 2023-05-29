@@ -15,6 +15,7 @@ from scripts.WhisperTranscriber     import WhisperTranscriber
 from scripts.VideoGenerator         import VideoGenerator
 from scripts.BasicVideoGenerator    import BasicVideoGenerator
 from scripts.PromptRefiner          import PromptRefiner
+from scripts.YoutubeDownloader      import YoutubeDownloader
 
 
 import modules.scripts as scripts
@@ -31,7 +32,7 @@ print(f"BASE PATH: {BASE_PATH}")
 transcriber: Transcriber = WhisperTranscriber(BASE_PATH)
 generator: VideoGenerator = BasicVideoGenerator()
 refiner: PromptRefiner = PromptRefiner()
-
+yt_scraper: YoutubeDownloader = YoutubeDownloader()
 
 def process_string_tag(tag):
     return tag
@@ -160,26 +161,31 @@ class Script(scripts.Script):
         return "Generates a music video from a song file ID 17"
 
     def ui(self, is_img2img):
-        def test_print():
-            print("TEST PRINTING: ")
-            return "sdfjh"
+        
+        def update_value(url):
+            self.yt_url = url
+            return url
+        def scrape_video():
+            print(f"URL: {self.yt_url}")
+            yt_scraper.download_all(self.yt_url, f"{BASE_PATH}/temp")
 
-        yt_video_input = gr.Textbox(label="Get audio and subtitles from a youtube video", lines = 1, elem_id=self.elem_id("yt_video_url"))
+        yt_video_input: gr.Textbox = gr.Textbox(label="Get audio and subtitles from a youtube video", lines = 1, elem_id=self.elem_id("yt_video_url"))
+
         with gr.Row(variant="compact", elem_id="apply_button_row"):
             yt_video_apply_btn = gr.Button(value="Get audio and captions from yt video", elem_id="run_crawler_btn")
         
-        yt_video_apply_btn.click(test_print)
+        yt_video_apply_btn.click(scrape_video)
 
         checkbox_gpt_refinement = gr.Checkbox(label="Let gpt refine the prompts", value=False, elem_id=self.elem_id("checkbox_gpt_refinement"))
         checkbox_translate = gr.Checkbox(label="Translate lyrics to english", value=False, elem_id=self.elem_id("checkbox_translate"))
         audio          = gr.File(label="Audio file", type='binary', elem_id=self.elem_id("audio_file"))
         prompt_txt     = gr.Textbox(label="List of prompt inputs", lines=1, elem_id=self.elem_id("prompt_txt"))
-        
-
 
         audio.change(fn=transcriber.transcribe_audio_file, inputs=[audio, checkbox_translate], outputs=[prompt_txt], show_progress=False)
         
         prompt_txt.change(lambda tb: gr.update(lines=7) if ("\n" in tb) else gr.update(lines=2), inputs=[prompt_txt], outputs=[prompt_txt], show_progress=False)
+        
+        yt_video_input.change(lambda tb: update_value(str(tb)), inputs=[yt_video_input], outputs=[yt_video_input], show_progress=False)
         return [prompt_txt, checkbox_gpt_refinement, checkbox_translate, yt_video_input]
 
     def run(self, p, prompt_txt: str, checkbox_gpt_refinement, checkbox_translate, yt_video_input):
