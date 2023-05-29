@@ -5,7 +5,7 @@ import re
 import webvtt
 from string import printable
 
-print("v1111")
+print("v1112")
 
 class YoutubeDownloader:
 
@@ -67,7 +67,14 @@ class YoutubeDownloader:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             try:
                 info_dict = ydl.extract_info(video_url, download=False)
+                
                 subtitles = info_dict.get('subtitles', {}).get('en')
+
+                #Sometimes the language is not called 'en', but en.xxxxxx where the x's are random characters.
+                if(not subtitles):
+                    all = info_dict.get('subtitles', {})
+                    key = list(all.keys())[0]
+                    subtitles = info_dict.get('subtitles', {}).get(key)
 
                 if subtitles:
                     def find(predicate, lst):
@@ -95,4 +102,4 @@ class YoutubeDownloader:
                 print(f"Error: {str(e)}")
 
 test = YoutubeDownloader()
-test.extract_text_from_vtt('J:/program/AI/stable_dev/stable-diffusion-webui/extensions/music-video-generator/temp/captions.vtt')
+test.download_captions("https://www.youtube.com/watch?v=lkZd2lBQb2c", "ttt.vtt")
