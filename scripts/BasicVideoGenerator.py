@@ -72,7 +72,7 @@ class BasicVideoGenerator(VideoGenerator):
 
         #Create the video file and add the subtitles with ffmpeg
         try:
-            os.system(f"""ffmpeg -f concat -safe 0 -i options.txt -i {audio_paths[0]} -vf \"settb=AVTB,fps=10\" -vcodec png -r 10 {output_file_path} -y""")
+            os.system(f"""ffmpeg -f concat -safe 0 -i options.txt -i {audio_paths[0]} -vf \"settb=AVTB,fps=10,scale=-1:1080\"  -vcodec h264 -r 10 {output_file_path} -y""")
             self.embedd_subtitles(output_file_path, vtt_paths[0])
         except Exception as e:
             print("Failed to generate video file: ")
