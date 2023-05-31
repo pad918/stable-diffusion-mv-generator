@@ -1,26 +1,30 @@
 from scripts.VideoGenerator import VideoGenerator
 import glob
 import webvtt
+from datetime import datetime as dt
 import datetime
 import time
 import os
-
+import modules.scripts as scripts
 # Repressents the simplest possible video generator.
-
+print("aaaa")
 class BasicVideoGenerator(VideoGenerator):
+    
     def parse_time(self, input: str):
         tt = time.strptime(input.split('.')[0],'%H:%M:%S')
         part = input.split('.')[1]
         return datetime.timedelta(hours=tt.tm_hour,minutes=tt.tm_min,seconds=tt.tm_sec).total_seconds() + float(part)/1000.0
-    def parse_vtt_subtitle(self, vtt_file_path):
+    
+    def parse_vtt_subtitle_file(self, vtt_file_path:str):
         vtt = webvtt.read(vtt_file_path)
         timings = []
         for s in vtt:
             time = {'text': s.text, 'start': self.parse_time(s.start), 'end': self.parse_time(s.end)}
             timings.append(time)
         return timings
-    def create_options_file(self, images_paths, timeings):
-        option_file = ""
+    
+    def create_options_file(self, images_paths, timeings) -> str:
+        option_file:str = ""
         for i in range(len(images_paths)):
             image_path  = images_paths[i]
             time        = timeings[i]
@@ -30,9 +34,20 @@ class BasicVideoGenerator(VideoGenerator):
             print(f"{i}, {image_path} duration: {duration}")
             option_file += f"file '{image_path}'\n"
             option_file += f"duration {1000.0*duration}ms\n"
-        #option_file += f"{audio_paths[0]}\n"
+        
         return option_file
     
+    # Embedds subtitles to video by creating a copy and then removing the old file
+    def embedd_subtitles(self, video_path:str, sub_path:str):
+        # To avoid overwriting the source file, we add "_captioned" to the name of the new file
+        root, extension = os.path.splitext(video_path)
+        embedded_file_path = f"{root}_captioned{extension}" # eg a/b/c.123.mp4 ==> a/b/c_captioned.mp4
+        os.system(f"""ffmpeg -i {video_path} -i {sub_path} -c copy -c:s mov_text {embedded_file_path}""")
+
+        #Remove the original file
+        os.remove(video_path)
+        return
+
     def generate_video(self, input_directory:str):
         images_paths = sorted(glob.glob(input_directory+"/*.png", recursive=False))
         vtt_paths    = glob.glob(input_directory + "/*.vtt", recursive=False)
@@ -43,13 +58,22 @@ class BasicVideoGenerator(VideoGenerator):
         if(len(audio_paths)!=1):
             raise Exception("DID NOT FIND 1 wav file in folder!")
 
-        print("PARSING VTT")
-        timeings = self.parse_vtt_subtitle(vtt_paths[0])
-        print("SUCCESS!")
+        timeings = self.parse_vtt_subtitle_file(vtt_paths[0])
 
         op = self.create_options_file(images_paths, timeings)
         with open('options.txt', 'w') as f:
                 f.write(op)
+        
+        #Create a filename of the current time in iso 8601 (sortable)
+        file_name = str(dt.now().strftime("%Y_%m_%d__%H_%M_%S"))+ ".mp4"
+        output_file_path = os.path.normpath(os.path.join(scripts.basedir(), "outputs/videos"))
+        output_file_path = os.path.join(output_file_path, file_name)
+        print(f"Saving file {file_name} to {output_file_path}")
 
-        print("USING FFMPEG COMMAND!!!")
-        os.system(f"""ffmpeg -f concat -safe 0 -i options.txt -i {audio_paths[0]} -vf \"settb=AVTB,fps=10\" -vcodec png -r 10 {input_directory}/output.mp4 -y""")
+        #Create the video file and add the subtitles with ffmpeg
+        try:
+            os.system(f"""ffmpeg -f concat -safe 0 -i options.txt -i {audio_paths[0]} -vf \"settb=AVTB,fps=10\" -vcodec png -r 10 {output_file_path} -y""")
+            self.embedd_subtitles(output_file_path, vtt_paths[0])
+        except Exception as e:
+            print("Failed to generate video file: ")
+            raise

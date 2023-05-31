@@ -100,6 +100,3 @@ class YoutubeDownloader:
                     print("No English captions found for the video.")
             except yt_dlp.DownloadError as e:
                 print(f"Error: {str(e)}")
-
-test = YoutubeDownloader()
-test.download_captions("https://www.youtube.com/watch?v=lkZd2lBQb2c", "ttt.vtt")

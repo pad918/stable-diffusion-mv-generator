@@ -50,6 +50,10 @@ class PromptRefiner:
     def refine(self, prompts):
         if(self.setting == ""):
             raise Exception("No setting given!")
+        #Avoid slow summarization if no prompts are supplied!
+        if(len(prompts)==0):
+            return prompts
+        
         refined = []
         j = 1
         for line in prompts:
