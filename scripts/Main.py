@@ -10,6 +10,7 @@ import traceback
 import shlex
 import os
 from PIL import Image
+from typing import List
 from scripts.Transcriber            import Transcriber
 from scripts.WhisperTranscriber     import WhisperTranscriber
 from scripts.VideoGenerator         import VideoGenerator
@@ -32,7 +33,11 @@ print(f"BASE PATH: {BASE_PATH}")
 # Set the used transcriber!
 transcriber: Transcriber = WhisperTranscriber(BASE_PATH)
 generator: VideoGenerator = BasicVideoGenerator()
-refiner: PromptRefiner = GPTImageDescriber()
+
+# Create the processing stack
+processing_stack: List[PromptRefiner] = []
+processing_stack.append(GPTImageDescriber())
+
 yt_scraper: YoutubeDownloader = YoutubeDownloader()
 
 def process_string_tag(tag):
@@ -213,16 +218,24 @@ class Script(scripts.Script):
         lines = [x.strip() for x in prompt_txt.splitlines()]
         lines = [x for x in lines if len(x) > 0]
         
-
-        if(checkbox_gpt_refinement):
-            print("Refining prompts...")
-            try:
-                refiner.generate_setting(lines)
+        # Convert the lyrics into images by running them through
+        # a number of refiners
+        try:
+            for refiner  in processing_stack:
                 lines = refiner.refine(lines)
-                print("Gpt succeded in refining the prompts")
-            except Exception as e: 
-                print('Failed refine prompts: '+ str(e))
-            print("done")
+        except Exception as e:
+            print("Failed to refine the pompts: " + str(e))
+            raise
+
+        # if(checkbox_gpt_refinement):
+        #     print("Refining prompts...")
+        #     try:
+        #         refiner.generate_setting(lines)
+        #         lines = refiner.refine(lines)
+        #         print("Gpt succeded in refining the prompts")
+        #     except Exception as e: 
+        #         print('Failed refine prompts: '+ str(e))
+        #     print("done")
 
         p.do_not_save_grid = True
 
