@@ -28,13 +28,21 @@ class BasicVideoGenerator(VideoGenerator):
         for i in range(len(images_paths)):
             image_path  = images_paths[i]
             time        = timeings[i]
-            duration = time['end']-time['start'] if i==len(images_paths)-1 else (timeings[i+1]['start']-time['start'])
-            if(i==0 and len(image_path)>1):
+            is_last_img: bool = i==(len(images_paths)-1)
+            is_first_img: bool = i==0
+            if(not is_first_img and not is_last_img):
+                duration = (timeings[i+1]['start']-time['start'])
+            elif(is_first_img and is_last_img):
+                print("NOPE")
+            elif(is_first_img):
                 duration = timeings[1]['start']
+            elif(is_last_img):
+                duration = 60 # Poor mans fix
+            
             print(f"{i}, {image_path} duration: {duration}")
             option_file += f"file '{image_path}'\n"
             option_file += f"duration {1000.0*duration}ms\n"
-        
+
         return option_file
     
     # Embedds subtitles to video by creating a copy and then removing the old file
@@ -42,7 +50,7 @@ class BasicVideoGenerator(VideoGenerator):
         # To avoid overwriting the source file, we add "_captioned" to the name of the new file
         root, extension = os.path.splitext(video_path)
         embedded_file_path = f"{root}_captioned{extension}" # eg a/b/c.123.mp4 ==> a/b/c_captioned.mp4
-        os.system(f"""ffmpeg -i {video_path} -i {sub_path} -c copy -c:s mov_text {embedded_file_path}""")
+        os.system(f"""ffmpeg -i {video_path} -i {sub_path} -c copy -c:s mov_text {embedded_file_path} -shortest""")
 
         #Remove the original file
         os.remove(video_path)

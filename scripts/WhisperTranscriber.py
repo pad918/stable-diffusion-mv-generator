@@ -17,10 +17,10 @@ class WhisperTranscriber(Transcriber):
             binary_file.write(audio_file)
         # SHOULD BE DONE WITH PYTHON BINDING, BUY MY ENVIRONMENT IS BROKEN AT THE MOMENT
         print(f"Transcribing audio file: {TEMP_FILE_NAME}")
-        os.system(f"""whisper {TEMP_FILE_NAME} --model medium --output_dir {f"{self.BASE_PATH}/temp"}""")
+        os.system(f"""whisper {TEMP_FILE_NAME} --model medium --output_dir {f"{self.BASE_PATH}/temp"} --task translate""")
         text_files = glob.glob(self.BASE_PATH+"/temp/*.txt", recursive=False)
         if(len(text_files)!=1):
-            raise Exception("Did not find 1 txt file in temp dir, transcription must have failed")
+            raise Exception(f"Found {len(text_files)} txt file(s) in {self.BASE_PATH}/temp/*.txt, transcription must have failed")
         with open(text_files[0], encoding="utf8") as f:
             lines = f.readlines()
         text = ""
