@@ -9,7 +9,7 @@ class GPTImageDescriber(PromptRefiner):
     def __self__(self):
         openai.api_key = os.getenv("OPENAI_API_KEY")
         
-    def generate_setting(self, prompts, n=10):
+    def generate_setting(self, prompts, additional_context, n=10):
         if(n<0):
             raise Exception("GPT is refusing api calls, you may have an internet problem!")
         try:
@@ -19,7 +19,11 @@ class GPTImageDescriber(PromptRefiner):
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": f"""
-                    Create a short senario from the given lyrics, make up relevant part of the story. Make the story based on who it is about, what it is about, the meaning of it and the mood of the story.  \nLyrics:\n{combined_lines}
+                    Create a short senario from the given lyrics, make up relevant part of the story. 
+                    Make the story based on who it is about, what it is about, the meaning of it and 
+                    the mood of the story.  
+                    Some additional context about the song:\n{additional_context}\n
+                    \n The lyrics of the song:\n{combined_lines}
                     """}
                 ]   
             )
@@ -30,7 +34,7 @@ class GPTImageDescriber(PromptRefiner):
         except Exception as e:
             print("Gpt error, retrying")
             time.sleep(3)
-            return self.generate_setting(prompts, n-1)
+            return self.generate_setting(prompts, additional_context, n-1)
 
     def refine_lyric(self, line, setting):
         completion = openai.ChatCompletion.create(
@@ -62,7 +66,8 @@ class GPTImageDescriber(PromptRefiner):
         if(not options['checkbox_gpt_refinement']):
             return prompts
         
-        setting = self.generate_setting(prompts)
+        additional_context = options['gpt_context']
+        setting = self.generate_setting(prompts, additional_context)
 
         #Avoid slow summarization if no prompts are supplied!
         if(len(prompts)==0):

@@ -62,6 +62,7 @@ class YoutubeDownloader:
             'subtitleslangs': ['en'],  # Specify the language of the captions
             'skip_download': True,  # Avoid downloading the video
             'quiet': False,  # Suppress console output
+            'force_overwrites': True
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:

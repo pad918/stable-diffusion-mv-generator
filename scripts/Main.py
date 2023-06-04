@@ -199,24 +199,28 @@ class Script(scripts.Script):
 
         checkbox_gpt_refinement = gr.Checkbox(label="Let gpt refine the prompts", value=True, elem_id=self.elem_id("checkbox_gpt_refinement"))
         checkbox_translate = gr.Checkbox(label="Translate lyrics to english", value=False, elem_id=self.elem_id("checkbox_translate"))
-        audio          = gr.File(label="Audio file", type='binary', elem_id=self.elem_id("audio_file"))
-        prompt_txt     = gr.Textbox(label="List of prompt inputs", lines=1, elem_id=self.elem_id("prompt_txt"))
+        audio           = gr.File(label="Audio file", type='binary', elem_id=self.elem_id("audio_file"))
+        prompt_txt      = gr.Textbox(label="Lyrics used for generation", lines=1, elem_id=self.elem_id("prompt_txt"))
+        gpt_context_txt = gr.Textbox(label="Additional gpt context for image generation", lines=4, elem_id=self.elem_id("gpt_context_txt"))
         
         
         yt_video_apply_btn.click(scrape_video, inputs=[], outputs=[prompt_txt])
         audio.change(fn=self.transcribe_and_update, inputs=[audio, checkbox_translate, prompt_txt], outputs=[prompt_txt], show_progress=False)
         
         prompt_txt.change(lambda tb: gr.update(lines=7) if ("\n" in tb) else gr.update(lines=2), inputs=[prompt_txt], outputs=[prompt_txt], show_progress=False)
+        gpt_context_txt.change(lambda tb: gr.update(lines=7) if ("\n" in tb) else gr.update(lines=4), inputs=[gpt_context_txt], outputs=[gpt_context_txt], show_progress=False)
         
         yt_video_input.change(lambda tb: update_value(str(tb)), inputs=[yt_video_input], outputs=[yt_video_input], show_progress=False)
-        return [prompt_txt, checkbox_gpt_refinement, checkbox_translate, yt_video_input]
+        return [prompt_txt, checkbox_gpt_refinement, checkbox_translate, yt_video_input, gpt_context_txt]
 
-    def run(self, p, prompt_txt: str, checkbox_gpt_refinement, checkbox_translate, yt_video_input):
+    def run(self, p, prompt_txt: str, checkbox_gpt_refinement, checkbox_translate, yt_video_input, gpt_context_txt):
         options = {
-            'checkbox_gpt_refinement': checkbox_gpt_refinement
+            'checkbox_gpt_refinement': checkbox_gpt_refinement,
+            'gpt_context': gpt_context_txt
             }
         
-        print(f"GENERATING USING THE TEXT PROMPT: {prompt_txt}")
+        print(f"GENERATING USING THE TEXT PROMPT: \n{p.prompt}\n\n and description: {prompt_txt}")
+        print(f"And additional context: {gpt_context_txt}")
         abc = prompt_tags.get("negative_prompt")
         print(f"PROMPT: {abc}")
         lines = [x.strip() for x in prompt_txt.splitlines()]
@@ -225,8 +229,11 @@ class Script(scripts.Script):
         # Convert the lyrics into images by running them through
         # a number of refiners
         try:
-            for refiner  in processing_stack:
+            for refiner in processing_stack:
                 lines = refiner.refine(lines, options)
+            # TODO Insert p.prompt in the beginning of all lines.
+            for i in range(len(lines)):
+                lines[i] = f"{p.prompt}, {lines[i]}" 
         except Exception as e:
             print("Failed to refine the pompts: " + str(e))
             raise
