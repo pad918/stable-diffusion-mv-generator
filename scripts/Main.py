@@ -185,6 +185,10 @@ class Script(scripts.Script):
             self.yt_url = url
             return url
         def scrape_video():
+            try:
+                self.yt_url
+            except:
+                raise Exception(f"No youtube video selected!")
             print(f"URL: {self.yt_url}")
             yt_scraper.download_all(self.yt_url, f"{BASE_PATH}/temp")
             return get_captions_from_file()
