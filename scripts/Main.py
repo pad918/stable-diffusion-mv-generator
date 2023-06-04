@@ -144,21 +144,18 @@ def wipe_directory(directory_path: str):
         print(f"Directory '{directory_path}' does not exist.")
         return
     # DOES NOT WORK AT THE MOMENT!
-    def contains_important_files(path):
-        importaint_files = ["py, mov, mp4, exe"]
-        for filename in os.listdir(path):
-            extension = filename.split(".")[-1]
-            if(extension in importaint_files):
-                return True
-        return False
-
-    if(contains_important_files(directory_path)):
-        raise Exception("Will not wipe directory since it contains imporant files")
-
+    def is_important_file(path):
+        importaint_files = ['.py', '.mov', '.mp4', '.exe', '.dll']
+        _, extension = os.path.splitext(path)
+        return extension in importaint_files
+    
     # Iterate over all files in the directory
     for filename in os.listdir(directory_path):
         file_path = os.path.join(directory_path, filename)
         
+        # Do not remove important files
+        if(is_important_file(file_path)):
+            continue
 
         # Check if the current path is a file
         if os.path.isfile(file_path):
@@ -172,7 +169,7 @@ def wipe_directory(directory_path: str):
 
 class Script(scripts.Script):
     def title(self):
-        return "Generates a music video from a song file ID 17"
+        return "Generates a music video from a song file"
 
     def transcribe_and_update(self, audio: str, translate: bool, prompt_txt):
         transcriber.transcribe_audio_file(audio, translate)
@@ -200,7 +197,7 @@ class Script(scripts.Script):
         
         
 
-        checkbox_gpt_refinement = gr.Checkbox(label="Let gpt refine the prompts", value=False, elem_id=self.elem_id("checkbox_gpt_refinement"))
+        checkbox_gpt_refinement = gr.Checkbox(label="Let gpt refine the prompts", value=True, elem_id=self.elem_id("checkbox_gpt_refinement"))
         checkbox_translate = gr.Checkbox(label="Translate lyrics to english", value=False, elem_id=self.elem_id("checkbox_translate"))
         audio          = gr.File(label="Audio file", type='binary', elem_id=self.elem_id("audio_file"))
         prompt_txt     = gr.Textbox(label="List of prompt inputs", lines=1, elem_id=self.elem_id("prompt_txt"))
@@ -215,7 +212,10 @@ class Script(scripts.Script):
         return [prompt_txt, checkbox_gpt_refinement, checkbox_translate, yt_video_input]
 
     def run(self, p, prompt_txt: str, checkbox_gpt_refinement, checkbox_translate, yt_video_input):
-
+        options = {
+            'checkbox_gpt_refinement': checkbox_gpt_refinement
+            }
+        
         print(f"GENERATING USING THE TEXT PROMPT: {prompt_txt}")
         abc = prompt_tags.get("negative_prompt")
         print(f"PROMPT: {abc}")
@@ -226,7 +226,7 @@ class Script(scripts.Script):
         # a number of refiners
         try:
             for refiner  in processing_stack:
-                lines = refiner.refine(lines)
+                lines = refiner.refine(lines, options)
         except Exception as e:
             print("Failed to refine the pompts: " + str(e))
             raise
@@ -281,7 +281,7 @@ class Script(scripts.Script):
             all_prompts += proc.all_prompts
             infotexts += proc.infotexts
 
-        # Save in images in a temp foler
+        # Save images in a temp foler
         print(f"SAVING {len(images)} images in temp folder")
         i = 0
         for elm in images:
@@ -294,7 +294,7 @@ class Script(scripts.Script):
         try:
             temp_folder:str = f"{BASE_PATH}/temp"
             generator.generate_video(temp_folder)
-            #wipe_directory(temp_folder)
+            wipe_directory(temp_folder)
             
         except Exception as e:
             print("Failed to generate the video: ", str(e))

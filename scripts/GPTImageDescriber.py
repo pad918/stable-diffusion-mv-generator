@@ -58,7 +58,10 @@ class GPTImageDescriber(PromptRefiner):
         return result
     
 
-    def refine(self, prompts: List[str]) -> List[str]:
+    def refine(self, prompts: List[str], options) -> List[str]:
+        if(not options['checkbox_gpt_refinement']):
+            return prompts
+        
         setting = self.generate_setting(prompts)
 
         #Avoid slow summarization if no prompts are supplied!
