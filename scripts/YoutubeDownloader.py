@@ -3,6 +3,7 @@ import requests
 import ffmpeg
 import re
 import webvtt
+import os
 from string import printable
 
 print("v1112")
@@ -32,9 +33,12 @@ class YoutubeDownloader:
 
     def download_all(self, video_url:str, destination_dir:str):
         print("STARING YOUTUBE DOWNLOADER!")
-        self.download_audio   (video_url, f"{destination_dir}/audio.wav")
+        
         self.download_captions(video_url, f"{destination_dir}/captions.vtt")
+        self.refine_captions(f"{destination_dir}/captions.vtt")
         self.extract_text_from_vtt(f"{destination_dir}/captions.vtt")
+
+        self.download_audio   (video_url, f"{destination_dir}/audio.wav")
 
     def download_audio(self, video_url:str, destination_file_path:str):
         ydl_opts = {
@@ -54,6 +58,32 @@ class YoutubeDownloader:
                 print('Audio downloaded successfully!')
             else:
                 print('Failed to retrieve audio URL.')
+    
+    #Removes duplicates and cleans the lyrics 
+    def refine_captions(self, captions_file_path):
+        print("Cleaning the captions")
+        vtt = webvtt.read(captions_file_path)
+        filtered = []
+        for c in vtt:
+            txt     = c.text
+            start   = c.start
+            end     = c.end
+            if(len(filtered)>0 and filtered[-1]['start']==start):
+                continue
+            dict = {'text': txt, 'start': start, 'end': end }
+            filtered.append(dict)
+        
+        #Save the filtered captions
+        filtered_captions = "WEBVTT\n\n"
+        for f in filtered:
+            # Add time stamps
+            filtered_captions += f"{f['start']} --> {f['end']}\n"
+            # Add caption text
+            filtered_captions += f"{f['text']}\n\n"
+
+        # Overwrite the source file
+        with open(captions_file_path, 'w', encoding='utf-8') as f:
+            f.write(filtered_captions)
 
     def download_captions(self, video_url:str, destination_file_path:str):
         print("DOWNLOADING CAPTIONS!")
