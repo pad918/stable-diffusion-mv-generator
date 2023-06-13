@@ -43,14 +43,11 @@ yt_scraper: YoutubeDownloader = YoutubeDownloader()
 def process_string_tag(tag):
     return tag
 
-
 def process_int_tag(tag):
     return int(tag)
 
-
 def process_float_tag(tag):
     return float(tag)
-
 
 def process_boolean_tag(tag):
     return True if (tag == "true") else False
@@ -62,7 +59,6 @@ def get_captions_from_file():
     with open(text_files[0], encoding="utf8") as f:
         lines = f.readlines()
     return " ".join(lines)
-
 
 prompt_tags = {
     "sd_model": None,
@@ -91,59 +87,12 @@ prompt_tags = {
     "do_not_save_grid": process_boolean_tag
 }
 
-
-def cmdargs(line):
-    args = shlex.split(line)
-    pos = 0
-    res = {}
-
-    while pos < len(args):
-        arg = args[pos]
-
-        assert arg.startswith("--"), f'must start with "--": {arg}'
-        assert pos+1 < len(args), f'missing argument for command line option {arg}'
-
-        tag = arg[2:]
-
-        if tag == "prompt" or tag == "negative_prompt":
-            pos += 1
-            prompt = args[pos]
-            pos += 1
-            while pos < len(args) and not args[pos].startswith("--"):
-                prompt += " "
-                prompt += args[pos]
-                pos += 1
-            res[tag] = prompt
-            continue
-
-
-        func = prompt_tags.get(tag, None)
-        assert func, f'unknown commandline option: {arg}'
-
-        val = args[pos+1]
-        if tag == "sampler_name":
-            val = sd_samplers.samplers_map.get(val.lower(), None)
-
-        res[tag] = func(val)
-
-        pos += 2
-
-    return res
-
-
-def load_prompt_file(file):
-    if file is None:
-        return None, gr.update(), gr.update(lines=7)
-    else:
-        lines = [x.strip() for x in file.decode('utf8', errors='ignore').split("\n")]
-        return None, "\n".join(lines), gr.update(lines=7)
-
 def wipe_directory(directory_path: str):
     # Check if the directory exists
     if not os.path.isdir(directory_path):
         print(f"Directory '{directory_path}' does not exist.")
         return
-    # DOES NOT WORK AT THE MOMENT!
+    
     def is_important_file(path):
         importaint_files = ['.py', '.mov', '.mp4', '.exe', '.dll']
         _, extension = os.path.splitext(path)
@@ -238,37 +187,20 @@ class Script(scripts.Script):
             print("Failed to refine the pompts: " + str(e))
             raise
 
-        # if(checkbox_gpt_refinement):
-        #     print("Refining prompts...")
-        #     try:
-        #         refiner.generate_setting(lines)
-        #         lines = refiner.refine(lines)
-        #         print("Gpt succeded in refining the prompts")
-        #     except Exception as e: 
-        #         print('Failed refine prompts: '+ str(e))
-        #     print("done")
-
         p.do_not_save_grid = True
 
         job_count = 0
         jobs = []
 
         for line in lines:
-            if "--" in line:
-                try:
-                    args = cmdargs(line)
-                except Exception:
-                    print(f"Error parsing line {line} as commandline:", file=sys.stderr)
-                    print(traceback.format_exc(), file=sys.stderr)
-                    args = {"prompt": line}
-            else:
-                args = {"prompt": line}
+            
+            args = {"prompt": line}
 
             job_count += args.get("n_iter", p.n_iter)
 
             jobs.append(args)
 
-        print(f"Will process {len(lines)} lines in {job_count} jobs.")
+        print(f"Will process {len(lines)} images in {job_count} jobs.")
 
         state.job_count = job_count
 

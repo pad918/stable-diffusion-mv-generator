@@ -6,8 +6,6 @@ import webvtt
 import os
 from string import printable
 
-print("v1112")
-
 class YoutubeDownloader:
 
     def extract_text_from_vtt(self, vtt_file_path):

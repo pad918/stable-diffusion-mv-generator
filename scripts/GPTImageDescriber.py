@@ -58,6 +58,7 @@ class GPTImageDescriber(PromptRefiner):
             ]
         )
         result:str = completion.choices[0].message.content
+        print("---------------------------------------\n")
         print(f"Generated: {result}")
         return result
     
@@ -79,7 +80,7 @@ class GPTImageDescriber(PromptRefiner):
                 try:
                     ref = self.refine_lyric(line, setting)
                     refined.append(ref)
-                    print(f"Generated {len(refined)}/{len(prompts)}")
+                    print(f"{len(refined)}/{len(prompts)}\n")
                     break
                 except Exception:
                     print("Failed to generate, retrying")

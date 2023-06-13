@@ -6,8 +6,8 @@ import datetime
 import time
 import os
 import modules.scripts as scripts
+
 # Repressents the simplest possible video generator.
-print("aaaa")
 class BasicVideoGenerator(VideoGenerator):
     
     def parse_time(self, input: str):
